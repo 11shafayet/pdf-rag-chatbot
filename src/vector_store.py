@@ -15,16 +15,17 @@ class VectorStore:
         texts = [chunk["text"] for chunk in chunks]
 
         embeddings = self.model.encode(texts)
-
         embeddings = np.array(embeddings).astype("float32")
 
         dimension = embeddings.shape[1]
 
         self.index = faiss.IndexFlatL2(dimension)
-
         self.index.add(embeddings)
 
     def search(self, query, top_k=3):
+        if self.index is None:
+            return []
+
         query_embedding = self.model.encode([query])
         query_embedding = np.array(query_embedding).astype("float32")
 
@@ -32,7 +33,13 @@ class VectorStore:
 
         results = []
 
-        for index in indices[0]:
-            results.append(self.chunks[index])
+        for distance, index in zip(distances[0], indices[0]):
+            if index == -1:
+                continue
+
+            chunk = self.chunks[index].copy()
+            chunk["distance"] = float(distance)
+
+            results.append(chunk)
 
         return results
