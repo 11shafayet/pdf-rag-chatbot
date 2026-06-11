@@ -1,15 +1,18 @@
-from src.pdf_loader import load_pdf
-from src.text_splitter import split_text
-from src.vector_store import VectorStore
-from src.llm import LLMClient
-from src.reranker import ReRanker
+from src.loaders.pdf_loader import load_pdf
+from src.preprocessing.text_splitter import split_text
+from src.llm.llm import LLMClient
+from src.retrieval.reranker import ReRanker
+from src.retrieval.bm25_store import BM25Store
+from src.retrieval.vector_store import VectorStore
 
 class RAGPipeline:
     def __init__(self):
         self.vector_store = VectorStore()
+        self.chunks = self.vector_store.chunks
         self.reranker = ReRanker()
         self.chunks = []
         self.llm = LLMClient()
+        self.bm25_store = BM25Store()
 
     def ingest_pdfs(self, pdf_paths):
         all_pages = []
@@ -25,6 +28,7 @@ class RAGPipeline:
         )
 
         self.vector_store.build_index(self.chunks)
+        self.bm25_store.build_index(self.chunks)
 
         return {
             "documents": len(pdf_paths),
@@ -36,10 +40,39 @@ class RAGPipeline:
         return self.ingest_pdfs([pdf_path])
         
     def retrieve(self, question, top_k=5):
-        candidate_chunks = self.vector_store.search(
+        faiss_results = self.vector_store.search(
             query=question,
             top_k=20
         )
+
+        bm25_results = self.bm25_store.search(
+            query=question,
+            top_k=20
+        )
+
+        merged_results = {}
+
+        for chunk in faiss_results:
+            key = (
+                chunk["source"],
+                chunk["page_number"],
+                chunk["chunk_id"]
+            )
+            merged_results[key] = chunk
+
+        for chunk in bm25_results:
+            key = (
+                chunk["source"],
+                chunk["page_number"],
+                chunk["chunk_id"]
+            )
+
+            if key in merged_results:
+                merged_results[key]["bm25_score"] = chunk.get("bm25_score", 0)
+            else:
+                merged_results[key] = chunk
+
+        candidate_chunks = list(merged_results.values())
 
         reranked_chunks = self.reranker.rerank(
             question=question,
@@ -85,7 +118,8 @@ class RAGPipeline:
                         "source": chunk["source"],
                         "page_number": chunk["page_number"],
                         "chunk_id": chunk["chunk_id"],
-                        "distance": chunk["distance"],
+                        "distance": chunk.get("distance"),
+                        "bm25_score": chunk.get("bm25_score"),
                         "rerank_score": chunk.get("rerank_score"),
                         "text_preview": chunk["text"][:250]
                     }

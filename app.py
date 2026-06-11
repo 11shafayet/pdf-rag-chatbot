@@ -3,7 +3,7 @@ import tempfile
 
 import streamlit as st
 
-from src.rag_pipeline import RAGPipeline
+from src.pipeline.rag_pipeline import RAGPipeline
 
 
 st.set_page_config(
@@ -20,7 +20,10 @@ if "rag" not in st.session_state:
     st.session_state.rag = RAGPipeline()
 
 if "pdf_processed" not in st.session_state:
-    st.session_state.pdf_processed = False
+    st.session_state.pdf_processed = (
+        st.session_state.rag.vector_store.index is not None
+        and len(st.session_state.rag.vector_store.chunks) > 0
+    )
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -28,6 +31,11 @@ if "messages" not in st.session_state:
 
 with st.sidebar:
     st.header("Document Upload")
+
+    if st.session_state.pdf_processed:
+        st.success("Saved index loaded. You can ask questions.")
+    else:
+        st.info("No saved index loaded. Upload PDFs to begin.")
 
     uploaded_files = st.file_uploader(
         "Upload one or more PDFs",
@@ -76,6 +84,9 @@ for message in st.session_state.messages:
                     )
                     st.caption(f"Retrieval distance: {source['distance']:.4f}")
 
+                    if source.get("bm25_score") is not None:
+                        st.caption(f"BM25 score: {source['bm25_score']:.4f}")
+
                     if source.get("rerank_score") is not None:
                         st.caption(f"Re-rank score: {source['rerank_score']:.4f}")
 
@@ -113,6 +124,9 @@ if question:
                         f"**{source['source']} — Page {source['page_number']} — Chunk {source['chunk_id']}**"
                     )
                     st.caption(f"Retrieval distance: {source['distance']:.4f}")
+
+                    if source.get("bm25_score") is not None:
+                        st.caption(f"BM25 score: {source['bm25_score']:.4f}")
 
                     if source.get("rerank_score") is not None:
                         st.caption(f"Re-rank score: {source['rerank_score']:.4f}")

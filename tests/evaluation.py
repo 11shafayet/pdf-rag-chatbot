@@ -1,4 +1,4 @@
-from src.rag_pipeline import RAGPipeline
+from src.pipeline.rag_pipeline import RAGPipeline
 
 
 TEST_CASES = [
