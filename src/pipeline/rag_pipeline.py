@@ -5,6 +5,7 @@ from src.retrieval.reranker import ReRanker
 from src.retrieval.bm25_store import BM25Store
 from src.retrieval.vector_store import VectorStore
 from src.retrieval.score_fusion import fuse_scores
+from src.retrieval.confidence import calculate_confidence
 
 class RAGPipeline:
     def __init__(self):
@@ -133,6 +134,7 @@ class RAGPipeline:
                         "faiss_norm": chunk.get("faiss_norm"),
                         "fusion_score": chunk.get("fusion_score"),
                         "rerank_score": chunk.get("rerank_score"),
+                        "evidence_text": chunk["text"],
                         "text_preview": chunk["text"][:250]
                     }
                     for chunk in retrieved_chunks
@@ -146,9 +148,15 @@ class RAGPipeline:
             context=context
         )
 
+        confidence = calculate_confidence(
+            chunks=retrieved_chunks,
+            answer=answer
+        )
+
         return {
             "question": question,
             "answer": answer,
+            "confidence": confidence,
             "sources": [
                 {
                     "source": chunk["source"],
@@ -160,33 +168,10 @@ class RAGPipeline:
                     "faiss_norm": chunk.get("faiss_norm"),
                     "fusion_score": chunk.get("fusion_score"),
                     "rerank_score": chunk.get("rerank_score"),
+                    "evidence_text": chunk["text"],
                     "text_preview": chunk["text"][:250]
                 }
                 for chunk in retrieved_chunks
             ]
         }
-        """receive user question, search vector database, retrieve relevant chunks, build context, send context + question to LLM, return answer + sources."""
-
-        retrieved_chunks = self.retrieve(question)
-
-        context = self.build_context(retrieved_chunks)
-
-        answer = self.llm.generate_answer(
-            question=question,
-            context=context
-        )
-
-        return {
-            "question": question,
-            "answer": answer,
-            "sources": [
-                {
-                    "source": chunk["source"],
-                    "page_number": chunk["page_number"],
-                    "chunk_id": chunk["chunk_id"],
-                    "distance": chunk["distance"],
-                    "text_preview": chunk["text"][:250]
-                }
-                for chunk in retrieved_chunks
-            ]
-        }
+     

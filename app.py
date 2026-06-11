@@ -76,9 +76,22 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
+        if message["role"] == "assistant" and message.get("confidence"):
+            confidence = message["confidence"]
+
+            label = confidence["label"]
+            score = confidence["score"]
+
+            if label == "High":
+                st.success(f"Confidence: 🟢 {label} ({score:.2f}%)")
+            elif label == "Medium":
+                st.warning(f"Confidence: 🟡 {label} ({score:.2f}%)")
+            else:
+                st.error(f"Confidence: 🔴 {label} ({score:.2f}%)")
+
         if message.get("sources"):
             with st.expander("Sources"):
-                for source in message["sources"]:
+                for index, source in enumerate(message["sources"], start=1):
                     st.markdown(
                         f"**{source['source']} — Page {source['page_number']} — Chunk {source['chunk_id']}**"
                     )
@@ -93,7 +106,12 @@ for message in st.session_state.messages:
                     if source.get("rerank_score") is not None:
                         st.caption(f"Re-rank score: {source['rerank_score']:.4f}")
 
-                    st.write(source["text_preview"])
+                    if index == 1:
+                        st.markdown("**Primary Evidence**")
+                        st.info(source.get("evidence_text", source["text_preview"]))
+                    else:
+                        st.markdown("**Supporting Match Preview**")
+                        st.write(source["text_preview"])
 
 
 if not st.session_state.pdf_processed:
@@ -120,9 +138,21 @@ if question:
                 response = st.session_state.rag.answer_question(question)
 
             st.write(response["answer"])
+            
+            confidence = response["confidence"]
+
+            label = confidence["label"]
+            score = confidence["score"]
+
+            if label == "High":
+                st.success(f"Confidence: 🟢 {label} ({score:.2f}%)")
+            elif label == "Medium":
+                st.warning(f"Confidence: 🟡 {label} ({score:.2f}%)")
+            else:
+                st.error(f"Confidence: 🔴 {label} ({score:.2f}%)")
 
             with st.expander("Sources"):
-                for source in response["sources"]:
+                for index, source in enumerate(response["sources"], start=1):
                     st.markdown(
                         f"**{source['source']} — Page {source['page_number']} — Chunk {source['chunk_id']}**"
                     )
@@ -137,12 +167,18 @@ if question:
                     if source.get("rerank_score") is not None:
                         st.caption(f"Re-rank score: {source['rerank_score']:.4f}")
     
-                    st.write(source["text_preview"])
+                    if index == 1:
+                        st.markdown("**Primary Evidence**")
+                        st.info(source.get("evidence_text", source["text_preview"]))
+                    else:
+                        st.markdown("**Supporting Match Preview**")
+                        st.write(source["text_preview"])
 
         st.session_state.messages.append(
             {
                 "role": "assistant",
                 "content": response["answer"],
+                "confidence": response["confidence"],
                 "sources": response["sources"]
             }
         )
