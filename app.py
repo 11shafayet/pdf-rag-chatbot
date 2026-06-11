@@ -29,30 +29,38 @@ if "messages" not in st.session_state:
 with st.sidebar:
     st.header("Document Upload")
 
-    uploaded_file = st.file_uploader(
-        "Upload a PDF",
-        type=["pdf"]
+    uploaded_files = st.file_uploader(
+        "Upload one or more PDFs",
+        type=["pdf"],
+        accept_multiple_files=True
     )
 
-    if uploaded_file is not None:
-        st.write(f"Selected file: {uploaded_file.name}")
+    if uploaded_files:
+        st.write("Selected files:")
 
-        if st.button("Process PDF"):
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
-                temp_file.write(uploaded_file.read())
-                temp_pdf_path = temp_file.name
+        for uploaded_file in uploaded_files:
+            st.write(f"- {uploaded_file.name}")
 
-            with st.spinner("Processing PDF..."):
-                stats = st.session_state.rag.ingest_pdf(temp_pdf_path)
+        if st.button("Process PDFs"):
+            temp_pdf_paths = []
+
+            for uploaded_file in uploaded_files:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
+                    temp_file.write(uploaded_file.read())
+                    temp_pdf_paths.append(temp_file.name)
+
+            with st.spinner("Processing PDFs..."):
+                stats = st.session_state.rag.ingest_pdfs(temp_pdf_paths)
 
             st.session_state.pdf_processed = True
 
-            st.success("PDF processed successfully.")
+            st.success("PDFs processed successfully.")
+            st.write(f"Documents: {stats['documents']}")
             st.write(f"Pages: {stats['pages']}")
             st.write(f"Chunks: {stats['chunks']}")
 
-            os.remove(temp_pdf_path)
-
+            for temp_pdf_path in temp_pdf_paths:
+                os.remove(temp_pdf_path)
 
 st.divider()
 

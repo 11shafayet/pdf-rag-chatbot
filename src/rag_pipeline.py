@@ -11,13 +11,15 @@ class RAGPipeline:
         self.chunks = []
         self.llm = LLMClient()
 
-    def ingest_pdf(self, pdf_path):
-        """load a PDF file, split it into chunks, and build the vector index."""
+    def ingest_pdfs(self, pdf_paths):
+        all_pages = []
 
-        pages = load_pdf(pdf_path)
+        for pdf_path in pdf_paths:
+            pages = load_pdf(pdf_path)
+            all_pages.extend(pages)
 
         self.chunks = split_text(
-            pages,
+            all_pages,
             chunk_size=1000,
             chunk_overlap=200
         )
@@ -25,10 +27,14 @@ class RAGPipeline:
         self.vector_store.build_index(self.chunks)
 
         return {
-            "pages": len(pages),
+            "documents": len(pdf_paths),
+            "pages": len(all_pages),
             "chunks": len(self.chunks)
         }
-
+    
+    def ingest_pdf(self, pdf_path):
+        return self.ingest_pdfs([pdf_path])
+        
     def retrieve(self, question, top_k=5):
         candidate_chunks = self.vector_store.search(
             query=question,
