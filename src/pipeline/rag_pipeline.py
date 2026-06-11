@@ -4,6 +4,7 @@ from src.llm.llm import LLMClient
 from src.retrieval.reranker import ReRanker
 from src.retrieval.bm25_store import BM25Store
 from src.retrieval.vector_store import VectorStore
+from src.retrieval.score_fusion import fuse_scores
 
 class RAGPipeline:
     def __init__(self):
@@ -74,9 +75,17 @@ class RAGPipeline:
 
         candidate_chunks = list(merged_results.values())
 
+        fused_chunks = fuse_scores(
+            candidate_chunks,
+            bm25_weight=0.4,
+            faiss_weight=0.6
+        )
+
+        rerank_candidates = fused_chunks[:10]
+
         reranked_chunks = self.reranker.rerank(
             question=question,
-            chunks=candidate_chunks,
+            chunks=rerank_candidates,
             top_k=top_k
         )
 
@@ -120,6 +129,9 @@ class RAGPipeline:
                         "chunk_id": chunk["chunk_id"],
                         "distance": chunk.get("distance"),
                         "bm25_score": chunk.get("bm25_score"),
+                        "bm25_norm": chunk.get("bm25_norm"),
+                        "faiss_norm": chunk.get("faiss_norm"),
+                        "fusion_score": chunk.get("fusion_score"),
                         "rerank_score": chunk.get("rerank_score"),
                         "text_preview": chunk["text"][:250]
                     }
@@ -143,6 +155,10 @@ class RAGPipeline:
                     "page_number": chunk["page_number"],
                     "chunk_id": chunk["chunk_id"],
                     "distance": chunk["distance"],
+                    "bm25_score": chunk.get("bm25_score"),
+                    "bm25_norm": chunk.get("bm25_norm"),
+                    "faiss_norm": chunk.get("faiss_norm"),
+                    "fusion_score": chunk.get("fusion_score"),
                     "rerank_score": chunk.get("rerank_score"),
                     "text_preview": chunk["text"][:250]
                 }

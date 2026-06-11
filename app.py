@@ -87,6 +87,9 @@ for message in st.session_state.messages:
                     if source.get("bm25_score") is not None:
                         st.caption(f"BM25 score: {source['bm25_score']:.4f}")
 
+                    if source.get("fusion_score") is not None:
+                        st.caption(f"Fusion score: {source['fusion_score']:.4f}")
+
                     if source.get("rerank_score") is not None:
                         st.caption(f"Re-rank score: {source['rerank_score']:.4f}")
 
@@ -127,6 +130,9 @@ if question:
 
                     if source.get("bm25_score") is not None:
                         st.caption(f"BM25 score: {source['bm25_score']:.4f}")
+
+                    if source.get("fusion_score") is not None:
+                        st.caption(f"Fusion score: {source['fusion_score']:.4f}")
 
                     if source.get("rerank_score") is not None:
                         st.caption(f"Re-rank score: {source['rerank_score']:.4f}")
