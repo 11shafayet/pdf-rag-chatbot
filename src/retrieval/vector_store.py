@@ -1,10 +1,11 @@
 import os
 import pickle
+import time
 
 import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
-
+from src.retrieval.embedding_cache import EmbeddingCache
 
 
 class VectorStore:
@@ -16,6 +17,8 @@ class VectorStore:
         self.index_path = "data/indexes/index.faiss"
         self.chunk_path = "data/indexes/chunks.pkl"
 
+        self.embedding_cache = EmbeddingCache()
+
         self.load_index()
 
     def build_index(self, chunks):
@@ -23,15 +26,60 @@ class VectorStore:
 
         texts = [chunk["text"] for chunk in chunks]
 
-        embeddings = self.model.encode(texts)
+        start_embedding = time.time()
+
+        embeddings = []
+
+        texts_to_embed = []
+        text_positions = []
+
+        for position, text in enumerate(texts):
+            cached_embedding = self.embedding_cache.get(text)
+
+            if cached_embedding is not None:
+                embeddings.append(cached_embedding)
+            else:
+                embeddings.append(None)
+                texts_to_embed.append(text)
+                text_positions.append(position)
+
+        if texts_to_embed:
+            new_embeddings = self.model.encode(
+                texts_to_embed,
+                batch_size=32,
+                show_progress_bar=True
+            )
+
+            for text, position, embedding in zip(
+                texts_to_embed,
+                text_positions,
+                new_embeddings
+            ):
+                self.embedding_cache.set(text, embedding)
+                embeddings[position] = embedding
+
+        embedding_time = time.time() - start_embedding
+
         embeddings = np.array(embeddings).astype("float32")
 
         dimension = embeddings.shape[1]
 
+        start_faiss = time.time()
+
         self.index = faiss.IndexFlatL2(dimension)
         self.index.add(embeddings)
 
+        faiss_time = time.time() - start_faiss
+
+        start_save = time.time()
         self.save_index()
+        save_time = time.time() - start_save
+
+        return {
+            "embedding_time": round(embedding_time, 2),
+            "faiss_time": round(faiss_time, 2),
+            "save_time": round(save_time, 2)
+        }
 
     def save_index(self):
         """Save FAISS index and chunk metadata."""

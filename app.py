@@ -66,6 +66,13 @@ with st.sidebar:
             st.write(f"Documents: {stats['documents']}")
             st.write(f"Pages: {stats['pages']}")
             st.write(f"Chunks: {stats['chunks']}")
+            st.write(f"Loading time: {stats['loading_time']}s")
+            st.write(f"Chunking time: {stats['chunking_time']}s")
+            st.write(f"Indexing time: {stats['indexing_time']}s")
+            st.write(f"Total time: {stats['total_time']}s")
+            st.write(f"Embedding time: {stats['embedding_time']}s")
+            st.write(f"FAISS time: {stats['faiss_time']}s")
+            st.write(f"Save time: {stats['save_time']}s")
 
             for temp_pdf_path in temp_pdf_paths:
                 os.remove(temp_pdf_path)

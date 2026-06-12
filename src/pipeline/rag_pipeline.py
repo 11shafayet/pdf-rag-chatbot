@@ -7,6 +7,7 @@ from src.retrieval.vector_store import VectorStore
 from src.retrieval.score_fusion import fuse_scores
 from src.retrieval.confidence import calculate_confidence
 from src.retrieval.citation import select_best_evidence_sentence
+import time
 
 class RAGPipeline:
     def __init__(self):
@@ -18,25 +19,42 @@ class RAGPipeline:
         self.bm25_store = BM25Store()
 
     def ingest_pdfs(self, pdf_paths):
+        start_total = time.time()
+
         all_pages = []
 
+        start_loading = time.time()
         for pdf_path in pdf_paths:
             pages = load_pdf(pdf_path)
             all_pages.extend(pages)
+        loading_time = time.time() - start_loading
 
+        start_chunking = time.time()
         self.chunks = split_text(
             all_pages,
             chunk_size=1000,
             chunk_overlap=200
         )
+        chunking_time = time.time() - start_chunking
 
-        self.vector_store.build_index(self.chunks)
+        start_indexing = time.time()
+        vector_stats = self.vector_store.build_index(self.chunks)
         self.bm25_store.build_index(self.chunks)
+        indexing_time = time.time() - start_indexing
+
+        total_time = time.time() - start_total
 
         return {
             "documents": len(pdf_paths),
             "pages": len(all_pages),
-            "chunks": len(self.chunks)
+            "chunks": len(self.chunks),
+            "loading_time": round(loading_time, 2),
+            "chunking_time": round(chunking_time, 2),
+            "indexing_time": round(indexing_time, 2),
+            "total_time": round(total_time, 2),
+            "embedding_time": vector_stats["embedding_time"],
+            "faiss_time": vector_stats["faiss_time"],
+            "save_time": vector_stats["save_time"],
         }
     
     def ingest_pdf(self, pdf_path):
