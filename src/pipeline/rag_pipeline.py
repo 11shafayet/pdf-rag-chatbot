@@ -6,6 +6,7 @@ from src.retrieval.bm25_store import BM25Store
 from src.retrieval.vector_store import VectorStore
 from src.retrieval.score_fusion import fuse_scores
 from src.retrieval.confidence import calculate_confidence
+from src.retrieval.citation import select_best_evidence_sentence
 
 class RAGPipeline:
     def __init__(self):
@@ -134,7 +135,10 @@ class RAGPipeline:
                         "faiss_norm": chunk.get("faiss_norm"),
                         "fusion_score": chunk.get("fusion_score"),
                         "rerank_score": chunk.get("rerank_score"),
-                        "evidence_text": chunk["text"],
+                        "evidence_text": select_best_evidence_sentence(
+                            question=question,
+                            chunk_text=chunk["text"]
+                        ),
                         "text_preview": chunk["text"][:250]
                     }
                     for chunk in retrieved_chunks
@@ -168,7 +172,10 @@ class RAGPipeline:
                     "faiss_norm": chunk.get("faiss_norm"),
                     "fusion_score": chunk.get("fusion_score"),
                     "rerank_score": chunk.get("rerank_score"),
-                    "evidence_text": chunk["text"],
+                    "evidence_text": select_best_evidence_sentence(
+                        question=question,
+                        chunk_text=chunk["text"]
+                    ),
                     "text_preview": chunk["text"][:250]
                 }
                 for chunk in retrieved_chunks
