@@ -71,7 +71,6 @@ with st.sidebar:
             st.write(f"Indexing time: {stats['indexing_time']}s")
             st.write(f"Total time: {stats['total_time']}s")
             st.write(f"Embedding time: {stats['embedding_time']}s")
-            st.write(f"FAISS time: {stats['faiss_time']}s")
             st.write(f"Save time: {stats['save_time']}s")
 
             for temp_pdf_path in temp_pdf_paths:

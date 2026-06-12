@@ -53,7 +53,6 @@ class RAGPipeline:
             "indexing_time": round(indexing_time, 2),
             "total_time": round(total_time, 2),
             "embedding_time": vector_stats["embedding_time"],
-            "faiss_time": vector_stats["faiss_time"],
             "save_time": vector_stats["save_time"],
         }
     

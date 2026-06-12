@@ -69,15 +69,13 @@ class VectorStore:
         self.index = faiss.IndexFlatL2(dimension)
         self.index.add(embeddings)
 
-        faiss_time = time.time() - start_faiss
-
         start_save = time.time()
         self.save_index()
+        self.embedding_cache.save()
         save_time = time.time() - start_save
 
         return {
             "embedding_time": round(embedding_time, 2),
-            "faiss_time": round(faiss_time, 2),
             "save_time": round(save_time, 2)
         }
 
