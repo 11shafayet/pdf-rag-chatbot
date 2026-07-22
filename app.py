@@ -101,7 +101,6 @@ for message in st.session_state.messages:
                     st.markdown(
                         f"**{source['source']} — Page {source['page_number']} — Chunk {source['chunk_id']}**"
                     )
-                    st.caption(f"Retrieval distance: {source['distance']:.4f}")
 
                     if source.get("bm25_score") is not None:
                         st.caption(f"BM25 score: {source['bm25_score']:.4f}")
@@ -145,24 +144,23 @@ if question:
 
             st.write(response["answer"])
             
-            confidence = response["confidence"]
+            confidence = response.get("confidence")
+            if confidence:
+                label = confidence["label"]
+                score = confidence["score"]
 
-            label = confidence["label"]
-            score = confidence["score"]
-
-            if label == "High":
-                st.success(f"Confidence: 🟢 {label} ({score:.2f}%)")
-            elif label == "Medium":
-                st.warning(f"Confidence: 🟡 {label} ({score:.2f}%)")
-            else:
-                st.error(f"Confidence: 🔴 {label} ({score:.2f}%)")
+                if label == "High":
+                    st.success(f"Confidence: 🟢 {label} ({score:.2f}%)")
+                elif label == "Medium":
+                    st.warning(f"Confidence: 🟡 {label} ({score:.2f}%)")
+                else:
+                    st.error(f"Confidence: 🔴 {label} ({score:.2f}%)")
 
             with st.expander("Sources"):
                 for index, source in enumerate(response["sources"], start=1):
                     st.markdown(
                         f"**{source['source']} — Page {source['page_number']} — Chunk {source['chunk_id']}**"
                     )
-                    st.caption(f"Retrieval distance: {source['distance']:.4f}")
 
                     if source.get("bm25_score") is not None:
                         st.caption(f"BM25 score: {source['bm25_score']:.4f}")

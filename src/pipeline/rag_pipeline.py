@@ -1,6 +1,7 @@
 from src.loaders.pdf_loader import load_pdf
 from src.preprocessing.text_splitter import split_text
 from src.llm.llm import LLMClient
+from src.retrieval.query_rewriter import QueryRewriter
 from src.retrieval.reranker import ReRanker
 from src.retrieval.bm25_store import BM25Store
 from src.retrieval.vector_store import VectorStore
@@ -12,11 +13,11 @@ import time
 class RAGPipeline:
     def __init__(self):
         self.vector_store = VectorStore()
-        self.chunks = self.vector_store.chunks
         self.reranker = ReRanker()
         self.chunks = []
         self.llm = LLMClient()
         self.bm25_store = BM25Store()
+        self.query_rewriter = QueryRewriter()
 
     def ingest_pdfs(self, pdf_paths):
         start_total = time.time()
@@ -122,44 +123,29 @@ class RAGPipeline:
 
         return "\n\n".join(context_parts)
 
-    def answer_question(self, question):
-        """receive user question, search vector database, retrieve relevant chunks, build context, send context + question to LLM, return answer + sources."""
-        retrieved_chunks = self.retrieve(question)
+    def answer_question(self, question, history=None):
+        """receive user question, decide if retrieval is needed, search vector database if so, retrieve relevant chunks, build context, send context + question to LLM, return answer + sources."""
+        if history is None:
+            history = []
+
+        rewrite_result = self.query_rewriter.rewrite(question, history)
+
+        if not rewrite_result["needs_retrieval"]:
+            return {
+                "question": question,
+                "answer": "I'm built to answer questions about your uploaded PDF — try asking something about the document.",
+                "confidence": None,
+                "sources": []
+            }
+
+        retrieved_chunks = self.retrieve(rewrite_result["search_query"])
 
         if not retrieved_chunks:
             return {
                 "question": question,
                 "answer": "I could not find this in the PDF.",
+                "confidence": {"label": "Low", "score": 0.0},
                 "sources": []
-            }
-
-        best_distance = retrieved_chunks[0]["distance"]
-
-        DISTANCE_THRESHOLD = 1.55
-
-        if best_distance > DISTANCE_THRESHOLD:
-            return {
-                "question": question,
-                "answer": "I could not find this in the PDF.",
-                "sources": [
-                    {
-                        "source": chunk["source"],
-                        "page_number": chunk["page_number"],
-                        "chunk_id": chunk["chunk_id"],
-                        "distance": chunk.get("distance"),
-                        "bm25_score": chunk.get("bm25_score"),
-                        "bm25_norm": chunk.get("bm25_norm"),
-                        "faiss_norm": chunk.get("faiss_norm"),
-                        "fusion_score": chunk.get("fusion_score"),
-                        "rerank_score": chunk.get("rerank_score"),
-                        "evidence_text": select_best_evidence_sentence(
-                            question=question,
-                            chunk_text=chunk["text"]
-                        ),
-                        "text_preview": chunk["text"][:250]
-                    }
-                    for chunk in retrieved_chunks
-                ]
             }
 
         context = self.build_context(retrieved_chunks)
@@ -183,7 +169,6 @@ class RAGPipeline:
                     "source": chunk["source"],
                     "page_number": chunk["page_number"],
                     "chunk_id": chunk["chunk_id"],
-                    "distance": chunk["distance"],
                     "bm25_score": chunk.get("bm25_score"),
                     "bm25_norm": chunk.get("bm25_norm"),
                     "faiss_norm": chunk.get("faiss_norm"),
