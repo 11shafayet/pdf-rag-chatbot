@@ -50,12 +50,14 @@ with st.sidebar:
             st.write(f"- {uploaded_file.name}")
 
         if st.button("Process PDFs"):
+            temp_dir = tempfile.mkdtemp()
             temp_pdf_paths = []
 
             for uploaded_file in uploaded_files:
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
-                    temp_file.write(uploaded_file.read())
-                    temp_pdf_paths.append(temp_file.name)
+                temp_path = os.path.join(temp_dir, uploaded_file.name)
+                with open(temp_path, "wb") as f:
+                    f.write(uploaded_file.read())
+                temp_pdf_paths.append(temp_path)
 
             with st.spinner("Processing PDFs..."):
                 stats = st.session_state.rag.ingest_pdfs(temp_pdf_paths)
