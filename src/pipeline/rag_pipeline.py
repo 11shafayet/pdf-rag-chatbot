@@ -8,6 +8,7 @@ from src.retrieval.vector_store import VectorStore
 from src.retrieval.score_fusion import fuse_scores
 from src.retrieval.confidence import calculate_confidence
 from src.retrieval.citation import select_best_evidence_sentence
+from src.retrieval.relevance_checker import RelevanceChecker
 import time
 
 class RAGPipeline:
@@ -18,6 +19,7 @@ class RAGPipeline:
         self.llm = LLMClient()
         self.bm25_store = BM25Store()
         self.query_rewriter = QueryRewriter()
+        self.relevance_checker = RelevanceChecker()
 
     def ingest_pdfs(self, pdf_paths):
         start_total = time.time()
@@ -124,7 +126,7 @@ class RAGPipeline:
         return "\n\n".join(context_parts)
 
     def answer_question(self, question, history=None):
-        """receive user question, decide if retrieval is needed, search vector database if so, retrieve relevant chunks, build context, send context + question to LLM, return answer + sources."""
+        """receive user question, decide if retrieval is needed, search vector database if so, filter retrieved chunks for relevance, build context, send context + question to LLM, return answer + sources."""
         if history is None:
             history = []
 
@@ -133,7 +135,7 @@ class RAGPipeline:
         if not rewrite_result["needs_retrieval"]:
             return {
                 "question": question,
-                "answer": "I'm built to answer questions about your uploaded PDF — try asking something about the document.",
+                "answer": "Happy to help! Ask me anything about your uploaded PDF.",
                 "confidence": None,
                 "sources": []
             }
@@ -148,7 +150,40 @@ class RAGPipeline:
                 "sources": []
             }
 
-        context = self.build_context(retrieved_chunks)
+        checked_chunks = self.relevance_checker.check(rewrite_result["search_query"], retrieved_chunks)
+        relevant_chunks = [chunk for chunk in checked_chunks if chunk["relevant"]]
+
+        def build_sources(chunks):
+            return [
+                {
+                    "source": chunk["source"],
+                    "page_number": chunk["page_number"],
+                    "chunk_id": chunk["chunk_id"],
+                    "distance": chunk.get("distance"),
+                    "bm25_score": chunk.get("bm25_score"),
+                    "bm25_norm": chunk.get("bm25_norm"),
+                    "faiss_norm": chunk.get("faiss_norm"),
+                    "fusion_score": chunk.get("fusion_score"),
+                    "rerank_score": chunk.get("rerank_score"),
+                    "relevant": chunk.get("relevant"),
+                    "evidence_text": select_best_evidence_sentence(
+                        question=question,
+                        chunk_text=chunk["text"]
+                    ),
+                    "text_preview": chunk["text"][:250]
+                }
+                for chunk in chunks
+            ]
+
+        if not relevant_chunks:
+            return {
+                "question": question,
+                "answer": "I could not find this in the PDF.",
+                "confidence": {"label": "Low", "score": 0.0},
+                "sources": build_sources(checked_chunks)
+            }
+
+        context = self.build_context(relevant_chunks)
 
         answer = self.llm.generate_answer(
             question=question,
@@ -156,7 +191,7 @@ class RAGPipeline:
         )
 
         confidence = calculate_confidence(
-            chunks=retrieved_chunks,
+            chunks=relevant_chunks,
             answer=answer
         )
 
@@ -164,23 +199,5 @@ class RAGPipeline:
             "question": question,
             "answer": answer,
             "confidence": confidence,
-            "sources": [
-                {
-                    "source": chunk["source"],
-                    "page_number": chunk["page_number"],
-                    "chunk_id": chunk["chunk_id"],
-                    "bm25_score": chunk.get("bm25_score"),
-                    "bm25_norm": chunk.get("bm25_norm"),
-                    "faiss_norm": chunk.get("faiss_norm"),
-                    "fusion_score": chunk.get("fusion_score"),
-                    "rerank_score": chunk.get("rerank_score"),
-                    "evidence_text": select_best_evidence_sentence(
-                        question=question,
-                        chunk_text=chunk["text"]
-                    ),
-                    "text_preview": chunk["text"][:250]
-                }
-                for chunk in retrieved_chunks
-            ]
+            "sources": build_sources(checked_chunks)
         }
-     
