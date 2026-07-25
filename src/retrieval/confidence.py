@@ -25,7 +25,10 @@ def calculate_confidence(chunks, answer):
             "label": "Low"
         }
     
-    top_chunk = chunks[0]
+    top_chunk = max(
+        chunks,
+        key=lambda chunk: chunk["rerank_score"] if chunk.get("rerank_score") is not None else float("-inf")
+    )
 
     fusion = top_chunk.get("fusion_score", 0)
     rerank = top_chunk.get("rerank_score", 0)

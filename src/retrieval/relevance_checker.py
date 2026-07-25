@@ -23,9 +23,15 @@ class RelevanceChecker:
 
             For EACH passage, decide: does it contain information that helps answer the question?
             A passage counts as relevant if it directly answers the question, partially answers it,
-            or provides necessary supporting context. Mark it irrelevant if it's off-topic, only
-            superficially shares a keyword, or is boilerplate (like copyright notices, headers,
-            page numbers) with no bearing on the question.
+            or provides necessary supporting context.
+
+            Being from the document is not enough on its own. A passage that only mentions the
+            paper's title, authors, affiliations, or publication details — or that consists of
+            copyright notices, licensing text, or page headers — is NOT relevant just because it
+            technically comes from the document. It must contain substantive content that actually
+            helps answer the specific question asked. Mark it irrelevant if it's off-topic, only
+            superficially shares a keyword with the question, or is boilerplate with no real bearing
+            on what's being asked.
 
             Respond with ONLY a JSON object, no markdown fences, no explanation, in this exact shape,
             with exactly one boolean per passage, in the same order they were given:

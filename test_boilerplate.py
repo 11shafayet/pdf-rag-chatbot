@@ -1,0 +1,40 @@
+from src.loaders.pdf_loader import strip_boilerplate
+
+real_page_1_text = (
+    "Provided proper attribution is provided, Google hereby grants permission to\n"
+    "reproduce the tables and figures in this paper solely for use in journalistic or\n"
+    "scholarly works. Attention Is All You Need\n"
+    "Ashish Vaswani∗\n"
+    "Google Brain\n"
+    "avaswani@google.com\n"
+    "Noam Shazeer∗\n"
+    "Google Brain\n"
+    "noam@google.com\n"
+    "Niki Parmar∗\n"
+    "Google Research\n"
+    "nikip@google.com\n"
+    "Jakob Uszkoreit∗\n"
+    "Google Research\n"
+    "usz@google.com\n"
+    "Llion Jones∗\n"
+    "Google Research\n"
+    "llion@google.com\n"
+    "Aidan N. Gomez∗†\n"
+    "University of Toronto\n"
+    "aidan@cs.toronto.edu\n"
+    "Łukasz Kaiser∗\n"
+    "Google Brain\n"
+    "lukaszkaiser@google.com\n"
+    "Illia Polosukhin∗‡\n"
+    "illia.polosukhin@gmail.com\n"
+    "Abstract\n"
+    "The dominant sequence transduction models are based on complex recurrent or\n"
+    "convolutional neural networks that include an encoder and a decoder. The best\n"
+    "performing models also connect the encoder and decoder through an attention\n"
+    "mechanism. We propose a new simple network architecture, the Transformer,\n"
+    "based solely on attention mechanisms, dispensing with recurrence and convolutions\n"
+    "entirely."
+)
+
+result = strip_boilerplate(real_page_1_text)
+print(repr(result))

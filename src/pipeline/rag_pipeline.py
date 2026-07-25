@@ -125,22 +125,47 @@ class RAGPipeline:
 
         return "\n\n".join(context_parts)
 
+    def _build_sources(self, chunks, question):
+        return [
+            {
+                "source": chunk["source"],
+                "page_number": chunk["page_number"],
+                "chunk_id": chunk["chunk_id"],
+                "distance": chunk.get("distance"),
+                "bm25_score": chunk.get("bm25_score"),
+                "bm25_norm": chunk.get("bm25_norm"),
+                "faiss_norm": chunk.get("faiss_norm"),
+                "fusion_score": chunk.get("fusion_score"),
+                "rerank_score": chunk.get("rerank_score"),
+                "relevant": chunk.get("relevant"),
+                "evidence_text": select_best_evidence_sentence(
+                    question=question,
+                    chunk_text=chunk["text"]
+                ),
+                "text_preview": chunk["text"][:250]
+            }
+            for chunk in chunks
+        ]
+
     def answer_question(self, question, history=None):
         """receive user question, decide if retrieval is needed, search vector database if so, filter retrieved chunks for relevance, build context, send context + question to LLM, return answer + sources."""
+
         if history is None:
             history = []
 
         rewrite_result = self.query_rewriter.rewrite(question, history)
+        print("REWRITTEN QUERY:", rewrite_result["search_query"])
 
         if not rewrite_result["needs_retrieval"]:
             return {
                 "question": question,
-                "answer": "Happy to help! Ask me anything about your uploaded PDF.",
+                "answer": "I'm built to answer questions about your uploaded PDF — try asking something about the document.",
                 "confidence": None,
                 "sources": []
             }
 
         retrieved_chunks = self.retrieve(rewrite_result["search_query"])
+        print(repr(retrieved_chunks[0]["text"]))
 
         if not retrieved_chunks:
             return {
@@ -153,34 +178,15 @@ class RAGPipeline:
         checked_chunks = self.relevance_checker.check(rewrite_result["search_query"], retrieved_chunks)
         relevant_chunks = [chunk for chunk in checked_chunks if chunk["relevant"]]
 
-        def build_sources(chunks):
-            return [
-                {
-                    "source": chunk["source"],
-                    "page_number": chunk["page_number"],
-                    "chunk_id": chunk["chunk_id"],
-                    "distance": chunk.get("distance"),
-                    "bm25_score": chunk.get("bm25_score"),
-                    "bm25_norm": chunk.get("bm25_norm"),
-                    "faiss_norm": chunk.get("faiss_norm"),
-                    "fusion_score": chunk.get("fusion_score"),
-                    "rerank_score": chunk.get("rerank_score"),
-                    "relevant": chunk.get("relevant"),
-                    "evidence_text": select_best_evidence_sentence(
-                        question=question,
-                        chunk_text=chunk["text"]
-                    ),
-                    "text_preview": chunk["text"][:250]
-                }
-                for chunk in chunks
-            ]
+        for chunk in checked_chunks:
+            print(chunk["page_number"], chunk.get("relevant"))
 
         if not relevant_chunks:
             return {
                 "question": question,
                 "answer": "I could not find this in the PDF.",
                 "confidence": {"label": "Low", "score": 0.0},
-                "sources": build_sources(checked_chunks)
+                "sources": self._build_sources(checked_chunks, question)
             }
 
         context = self.build_context(relevant_chunks)
@@ -199,5 +205,5 @@ class RAGPipeline:
             "question": question,
             "answer": answer,
             "confidence": confidence,
-            "sources": build_sources(checked_chunks)
+            "sources": self._build_sources(checked_chunks, question)
         }
