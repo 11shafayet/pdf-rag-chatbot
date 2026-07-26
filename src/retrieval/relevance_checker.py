@@ -1,7 +1,7 @@
-import json
 import requests
 
 from src.llm.llm import LLMClient
+from src.utils.json_parsing import parse_json_response
 
 
 class RelevanceChecker:
@@ -19,24 +19,23 @@ class RelevanceChecker:
 
         system_prompt = """You are a relevance-judging assistant for a document question-answering system.
 
-            You will be given a question and a numbered list of text passages retrieved from a document.
+You will be given a question and a numbered list of text passages retrieved from a document.
 
-            For EACH passage, decide: does it contain information that helps answer the question?
-            A passage counts as relevant if it directly answers the question, partially answers it,
-            or provides necessary supporting context.
+For EACH passage, decide: does it contain information that helps answer the question?
+A passage counts as relevant if it directly answers the question, partially answers it,
+or provides necessary supporting context.
 
-            Being from the document is not enough on its own. A passage that only mentions the
-            paper's title, authors, affiliations, or publication details — or that consists of
-            copyright notices, licensing text, or page headers — is NOT relevant just because it
-            technically comes from the document. It must contain substantive content that actually
-            helps answer the specific question asked. Mark it irrelevant if it's off-topic, only
-            superficially shares a keyword with the question, or is boilerplate with no real bearing
-            on what's being asked.
+Being from the document is not enough on its own. A passage that only mentions the
+paper's title, authors, affiliations, or publication details — or that consists of
+copyright notices, licensing text, or page headers — is NOT relevant just because it
+technically comes from the document. It must contain substantive content that actually
+helps answer the specific question asked. Mark it irrelevant if it's off-topic, only
+superficially shares a keyword with the question, or is boilerplate with no real bearing
+on what's being asked.
 
-            Respond with ONLY a JSON object, no markdown fences, no explanation, in this exact shape,
-            with exactly one boolean per passage, in the same order they were given:
-            {"relevant": [true, false, true, ...]}
-        """
+Respond with ONLY a JSON object, no markdown fences, no explanation, in this exact shape,
+with exactly one boolean per passage, in the same order they were given:
+{"relevant": [true, false, true, ...]}"""
 
         passages_text = "\n\n".join(
             f"Passage {i + 1} (Page {chunk.get('page_number', '?')}):\n{chunk['text']}"
@@ -44,11 +43,10 @@ class RelevanceChecker:
         )
 
         user_prompt = f"""Question:
-            {question}
+{question}
 
-            Passages:
-            {passages_text}
-        """
+Passages:
+{passages_text}"""
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -56,17 +54,8 @@ class RelevanceChecker:
         ]
 
         try:
-            raw_response = self.llm.call(messages)
-
-            cleaned = raw_response.strip()
-
-            if cleaned.startswith("```"):
-                cleaned = cleaned.strip("`")
-                if cleaned.startswith("json"):
-                    cleaned = cleaned[4:]
-                cleaned = cleaned.strip()
-
-            parsed = json.loads(cleaned)
+            raw_response = self.llm.call(messages, temperature=0.0)
+            parsed = parse_json_response(raw_response, expected_keys=["relevant"])
             flags = parsed["relevant"]
 
             if not isinstance(flags, list) or len(flags) != len(retrieved_chunks):
@@ -77,11 +66,8 @@ class RelevanceChecker:
 
             return retrieved_chunks
 
-        except (json.JSONDecodeError, AttributeError, KeyError, ValueError, requests.exceptions.RequestException):
+        except (ValueError, KeyError, AttributeError, requests.exceptions.RequestException):
             for chunk in retrieved_chunks:
                 chunk["relevant"] = True
 
             return retrieved_chunks
-
-
-    
