@@ -1,0 +1,149 @@
+{
+  "source_pdf": "attention.pdf",
+  "cases": [
+    {
+      "id": "gt_001",
+      "category": "factual",
+      "question": "What is the dimensionality of the model's embeddings?",
+      "expected_answer": "512 (d_model = 512)",
+      "expected_page": [3, 4],
+      "should_find_answer": true
+    },
+    {
+      "id": "gt_002",
+      "category": "factual",
+      "question": "How many attention heads does the base Transformer use?",
+      "expected_answer": "8",
+      "expected_page": [4, 5],
+      "should_find_answer": true
+    },
+    {
+      "id": "gt_003",
+      "category": "factual",
+      "question": "How many layers are in the encoder stack?",
+      "expected_answer": "6 (also 6 layers in the decoder)",
+      "expected_page": [3],
+      "should_find_answer": true
+    },
+    {
+      "id": "gt_004",
+      "category": "factual",
+      "question": "What optimizer was used for training?",
+      "expected_answer": "Adam, with beta1=0.9, beta2=0.98, epsilon=1e-9",
+      "expected_page": [7],
+      "should_find_answer": true
+    },
+    {
+      "id": "gt_005",
+      "category": "factual",
+      "question": "What dropout rate was used during training?",
+      "expected_answer": "0.1 (P_drop = 0.1)",
+      "expected_page": [8],
+      "should_find_answer": true
+    },
+    {
+      "id": "gt_006",
+      "category": "factual",
+      "question": "How many warmup steps were used for the learning rate schedule?",
+      "expected_answer": "4000",
+      "expected_page": [7],
+      "should_find_answer": true
+    },
+    {
+      "id": "gt_007",
+      "category": "factual",
+      "question": "What BLEU score did the model achieve on WMT 2014 English-to-German?",
+      "expected_answer": "28.4 (big model)",
+      "expected_page": [8],
+      "should_find_answer": true
+    },
+    {
+      "id": "gt_008",
+      "category": "factual",
+      "question": "What BLEU score did the model achieve on WMT 2014 English-to-French?",
+      "expected_answer": "41.0",
+      "expected_page": [8],
+      "should_find_answer": true
+    },
+    {
+      "id": "gt_009",
+      "category": "factual",
+      "question": "What hardware was used to train the base model?",
+      "expected_answer": "8 NVIDIA P100 GPUs",
+      "expected_page": [7],
+      "should_find_answer": true
+    },
+    {
+      "id": "gt_010",
+      "category": "factual",
+      "question": "What label smoothing value was used during training?",
+      "expected_answer": "epsilon_ls = 0.1",
+      "expected_page": [7, 8],
+      "should_find_answer": true
+    },
+    {
+      "id": "gt_011",
+      "category": "conceptual",
+      "question": "What architecture does the paper introduce?",
+      "expected_answer": "The Transformer — a model based entirely on attention mechanisms, with no recurrence or convolution",
+      "expected_page": [1, 2, 3],
+      "should_find_answer": true
+    },
+    {
+      "id": "gt_012",
+      "category": "conceptual",
+      "question": "What are the two sub-layers in each encoder layer?",
+      "expected_answer": "A multi-head self-attention mechanism and a position-wise fully connected feed-forward network",
+      "expected_page": [3],
+      "should_find_answer": true
+    },
+    {
+      "id": "gt_013",
+      "category": "conceptual",
+      "question": "What is the purpose of positional encoding?",
+      "expected_answer": "Injects information about the relative or absolute position of tokens in the sequence, since the model has no recurrence or convolution to capture order",
+      "expected_page": [5, 6],
+      "should_find_answer": true
+    },
+    {
+      "id": "gt_014",
+      "category": "conceptual",
+      "question": "What is Scaled Dot-Product Attention, and why is it scaled?",
+      "expected_answer": "Attention computed as dot products of queries and keys, divided by sqrt(d_k), to counteract dot products growing large in magnitude for large d_k, which would push the softmax into regions with extremely small gradients",
+      "expected_page": [3, 4],
+      "should_find_answer": true
+    },
+    {
+      "id": "gt_015",
+      "category": "conceptual",
+      "question": "What is the main motivation for using self-attention instead of recurrent or convolutional layers?",
+      "expected_answer": "Lower total computational complexity per layer, more computation that can be parallelized, and shorter path length between long-range dependencies in the network",
+      "expected_page": [6, 7],
+      "should_find_answer": true
+    },
+    {
+      "id": "gt_016",
+      "category": "multi_hop",
+      "question": "How does multi-head attention differ from single-head attention, and why do the authors use multiple heads?",
+      "expected_answer": "Queries, keys, and values are linearly projected h times into lower-dimensional subspaces and attention is performed in parallel on each; multiple heads let the model jointly attend to information from different representation subspaces at different positions, which a single attention head averages away",
+      "expected_page": [4, 5],
+      "should_find_answer": true
+    },
+    {
+      "id": "gt_017",
+      "category": "unanswerable",
+      "question": "What does this paper say about quarterly earnings reports?",
+      "expected_answer": "Not present in the paper",
+      "expected_page": [],
+      "should_find_answer": false
+    },
+    {
+      "id": "gt_018",
+      "category": "unanswerable_trap",
+      "question": "What dataset was used to pretrain BERT in this paper?",
+      "expected_answer": "Not present — BERT is not discussed in this paper (it postdates it); tests whether the model hallucinates from outside training knowledge instead of admitting absence",
+      "expected_page": [],
+      "should_find_answer": false
+    }
+  ]
+}
